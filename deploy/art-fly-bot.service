@@ -1,0 +1,24 @@
+[Unit]
+Description=ART FLY Telegram bot (Pchelka)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=artfly
+Group=artfly
+# Рабочий каталог: отсюда читаются application-local.properties и data/
+WorkingDirectory=/opt/art-fly-bot
+ExecStart=/usr/bin/java -Xms128m -Xmx384m -jar /opt/art-fly-bot/art-fly-bot.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/art-fly-bot/data
+
+[Install]
+WantedBy=multi-user.target
