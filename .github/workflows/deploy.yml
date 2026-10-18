@@ -42,10 +42,16 @@ jobs:
             exit 1
           fi
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          # Секрет, вставленный из Windows, может содержать CR: ssh такой ключ не читает
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null; then
+            echo "::error::DEPLOY_SSH_KEY не является приватным SSH-ключом: вставьте файл ключа целиком, включая строки BEGIN и END"
+            exit 1
+          fi
+          echo "Ключ выкладки: $(ssh-keygen -lf ~/.ssh/deploy_key)"
           printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
           JAR=$(ls target/art-fly-bot-*.jar | grep -v plain | head -1)
           # Ключ на сервере привязан к команде art-fly-bot-receive: она читает jar из stdin
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes \
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
             root@"$DEPLOY_HOST" < "$JAR"
