@@ -19,6 +19,8 @@ ssh "$HOST" "set -e
 
 scp -q "$JAR" "$HOST:$APP_DIR/art-fly-bot.jar.new"
 scp -q deploy/art-fly-bot.service "$HOST:/etc/systemd/system/art-fly-bot.service"
+scp -q deploy/art-fly-bot-receive.sh "$HOST:/usr/local/bin/art-fly-bot-receive"
+ssh "$HOST" "sed -i 's/\r$//' /usr/local/bin/art-fly-bot-receive && chmod 755 /usr/local/bin/art-fly-bot-receive"
 ssh "$HOST" "test -f $APP_DIR/data/masters.csv" || scp -q data/masters.csv "$HOST:$APP_DIR/data/masters.csv"
 if ! ssh "$HOST" "test -f $APP_DIR/application-local.properties"; then
   scp -q application-local.properties "$HOST:$APP_DIR/application-local.properties"

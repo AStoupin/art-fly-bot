@@ -1,0 +1,51 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_HOST: 204.77.1.43
+  # Публичный ключ сервера (ssh-keyscan -t ed25519 204.77.1.43), чтобы не доверять ключу при первом подключении
+  DEPLOY_HOST_KEY: 204.77.1.43 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIhqnDKwSAnM0BdlbgBrbbAfB9ODgn0sZ7J0yLAqeFjv
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test
+        run: ./mvnw -B -ntp clean package
+
+      - name: Deploy to VPS
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::error::Не задан секрет DEPLOY_SSH_KEY (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          JAR=$(ls target/art-fly-bot-*.jar | grep -v plain | head -1)
+          # Ключ на сервере привязан к команде art-fly-bot-receive: она читает jar из stdin
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            root@"$DEPLOY_HOST" < "$JAR"
