@@ -35,3 +35,5 @@ build/
 ### ART FLY ###
 data/records.csv
 application-local.properties
+github_deploy_key
+github_deploy_key.pub
